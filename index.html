@@ -1,0 +1,819 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Undangan Pernikahan</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        jawa: {
+                            dark: '#2A1A10',   // Cokelat sangat gelap (Warna Kopi/Kayu Jati)
+                            brown: '#4A2E1B',  // Cokelat medium (Batik Sogan)
+                            gold: '#D4AF37',   // Emas Klasik
+                            lightgold: '#F3E5AB', // Emas Muda/Champagne
+                            cream: '#FDFBF7',  // Krem Kertas Tua
+                            paper: '#F4EFEA',  // Latar belakang krem gelap
+                        }
+                    },
+                    fontFamily: {
+                        serif: ['"Playfair Display"', 'serif'],
+                        sans: ['"Lora"', 'serif'],
+                    },
+                    backgroundImage: {
+                        'batik-pattern': "url('data:image/svg+xml,%3Csvg width=\\'40\\' height=\\'40\\' viewBox=\\'0 0 40 40\\' xmlns=\\'http://www.w3.org/2000/svg\\'%3E%3Cpath d=\\'M20 20.5V18H0v-2h20v-2.5L22.5 11 25 13.5V16h20v2H25v2.5L22.5 23 20 20.5zM0 38h20v-2.5L22.5 33 25 35.5V38h20v2H25v2.5L22.5 45 20 42.5V40H0v-2zm0-40h20V-.5L22.5-3 25-.5V2h20v2H25v2.5L22.5 9 20 6.5V4H0V2z\\' fill=\\'%23d4af37\\' fill-opacity=\\'0.05\\' fill-rule=\\'evenodd\\'/%3E%3C/svg%3E')",
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Lora:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+
+    <!-- React, ReactDOM, Babel, dan Framer Motion via CDN -->
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://unpkg.com/framer-motion@10.16.4/dist/framer-motion.js"></script>
+
+    <style>
+        body { scroll-behavior: smooth; }
+        .scrollbar-hide::-webkit-scrollbar { display: none; }
+        .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+        
+        /* Ornamen Bingkai Klasik Jawa */
+        .frame-corner {
+            position: absolute;
+            width: 40px;
+            height: 40px;
+            border-color: #D4AF37;
+        }
+        .frame-tl { top: 20px; left: 20px; border-top: 2px solid; border-left: 2px solid; }
+        .frame-tr { top: 20px; right: 20px; border-top: 2px solid; border-right: 2px solid; }
+        .frame-bl { bottom: 20px; left: 20px; border-bottom: 2px solid; border-left: 2px solid; }
+        .frame-br { bottom: 20px; right: 20px; border-bottom: 2px solid; border-right: 2px solid; }
+
+        /* Custom image overlay blend */
+        .bg-blend-custom {
+            mix-blend-mode: overlay;
+        }
+    </style>
+</head>
+<body class="bg-jawa-paper text-jawa-dark font-sans selection:bg-jawa-gold selection:text-white">
+
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+        const { motion, AnimatePresence } = window.Motion;
+
+        const apiKey = ""; 
+
+        // ==========================================
+        // KONFIGURASI DATA PENGANTIN
+        // Ubah nama di bawah ini, dan seluruh website akan otomatis menyesuaikan!
+        // ==========================================
+        const PENGANTIN = {
+            pria: "Roby",
+            priaLengkap: "Roby Nurmawan",
+            wanita: "Ririn",
+            wanitaLengkap: "Riri Anda Ririn Karim"
+        };
+
+        // --- Ikon SVG Kustom ---
+        const IconEnvelope = () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>;
+        const IconHeart = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-8 h-8 mx-auto text-jawa-gold mb-6"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>;
+        const IconCalendar = () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5 text-jawa-gold"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>;
+        const IconClock = () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5 text-jawa-gold"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>;
+        const IconMapPin = () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-6 h-6 text-jawa-gold mb-3"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>;
+        const IconSparkles = () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4 text-jawa-gold"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/><path d="M5 3v4"/><path d="M19 17v4"/><path d="M3 5h4"/><path d="M17 19h4"/></svg>;
+        const IconSend = () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4 text-jawa-dark"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>;
+        const IconCheck = () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5 shrink-0 text-green-500"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>;
+        const IconAlert = () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5 shrink-0"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>;
+        const IconLoader = () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4 animate-spin text-jawa-dark"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>;
+        const IconCopy = () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>;
+        const IconGift = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-8 h-8 mx-auto text-jawa-gold mb-4"><rect x="3" y="8" width="18" height="14" rx="2"/><path d="M12 5a3 3 0 1 0-3 3"/><path d="M15 8a3 3 0 1 0-3-3"/><path d="M12 15h.01"/><path d="M12 8v14"/></svg>;
+
+        function App() {
+            const [timeLeft, setTimeLeft] = useState({ hari: 0, jam: 0, menit: 0, detik: 0 });
+            const [isOpened, setIsOpened] = useState(false);
+            const [guestNameInput, setGuestNameInput] = useState('');
+            const [guestName, setGuestName] = useState('');
+
+            // Update Tab Title otomatis
+            useEffect(() => {
+                document.title = `Undangan Pernikahan | ${PENGANTIN.pria} & ${PENGANTIN.wanita}`;
+            }, []);
+
+            // Membaca Parameter URL jika membagikan tautan seperti: index.html?to=Budi
+            useEffect(() => {
+                const params = new URLSearchParams(window.location.search);
+                const to = params.get('to');
+                if (to) setGuestNameInput(to);
+            }, []);
+
+            useEffect(() => {
+                const calculateTimeLeft = () => {
+                    const eventDate = new Date("December 18, 2026 08:00:00").getTime();
+                    const now = new Date().getTime();
+                    const difference = eventDate - now;
+
+                    if (difference > 0) {
+                        setTimeLeft({
+                            hari: Math.floor(difference / (1000 * 60 * 60 * 24)),
+                            jam: Math.floor((difference / (1000 * 60 * 60)) % 24),
+                            menit: Math.floor((difference / 1000 / 60) % 60),
+                            detik: Math.floor((difference / 1000) % 60)
+                        });
+                    }
+                };
+                calculateTimeLeft();
+                const timer = setInterval(calculateTimeLeft, 1000);
+                return () => clearInterval(timer);
+            }, []);
+
+            const handleOpen = (e) => {
+                e.preventDefault();
+                const finalName = guestNameInput.trim() || 'Tamu Undangan';
+                setGuestName(finalName);
+                setIsOpened(true); // Membuka cover undangan
+            };
+
+            return (
+                <div className={`overflow-x-hidden bg-jawa-paper relative ${!isOpened ? 'h-screen overflow-hidden' : ''}`}>
+                    
+                    {/* Halaman Sampul Depan */}
+                    <AnimatePresence>
+                        {!isOpened && (
+                            <CoverSection 
+                                guestNameInput={guestNameInput} 
+                                setGuestNameInput={setGuestNameInput} 
+                                handleOpen={handleOpen} 
+                            />
+                        )}
+                    </AnimatePresence>
+
+                    {/* Konten Utama */}
+                    <HeroSection guestName={guestName} />
+                    <CountdownSection timeLeft={timeLeft} />
+                    <OurStorySection />
+                    <EventDetailsSection />
+                    <GallerySection />
+                    <WeddingGiftSection />
+                    <RSVPAndWishesSection prefilledName={guestName} />
+                    <FooterSection />
+                </div>
+            );
+        }
+
+        function CoverSection({ guestNameInput, setGuestNameInput, handleOpen }) {
+            return (
+                <motion.div
+                    initial={{ opacity: 1 }}
+                    exit={{ opacity: 0, y: '-100%' }}
+                    transition={{ duration: 1.2, ease: [0.76, 0, 0.24, 1] }}
+                    className="fixed inset-0 z-50 flex flex-col items-center justify-center p-6 text-center bg-jawa-dark text-jawa-lightgold overflow-hidden"
+                >
+                    {/* Latar Belakang Cover */}
+                    <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1583939008705-590b2fb2b8cb?auto=format&fit=crop&q=80')] bg-cover bg-center opacity-30"></div>
+                    <div className="absolute inset-0 bg-gradient-to-t from-jawa-dark via-jawa-dark/90 to-jawa-dark/80"></div>
+                    <div className="absolute inset-0 bg-batik-pattern opacity-40 mix-blend-color-burn"></div>
+
+                    {/* Ornamen Bingkai */}
+                    <div className="absolute inset-4 border border-jawa-gold/30 pointer-events-none z-10"></div>
+                    <div className="frame-corner frame-tl z-10"></div>
+                    <div className="frame-corner frame-tr z-10"></div>
+                    <div className="frame-corner frame-bl z-10"></div>
+                    <div className="frame-corner frame-br z-10"></div>
+
+                    {/* Konten Input Nama */}
+                    <div className="z-20 w-full max-w-sm flex flex-col items-center mt-8">
+                        <p className="text-xs tracking-[0.4em] uppercase text-jawa-gold mb-6 font-medium">Pawiwahan Ageng</p>
+                        <h1 className="text-5xl md:text-6xl font-serif mb-12 text-jawa-cream drop-shadow-md">{PENGANTIN.pria} & {PENGANTIN.wanita}</h1>
+                        
+                        <div className="w-full bg-jawa-dark/60 p-8 border border-jawa-gold/30 rounded-sm backdrop-blur-sm shadow-xl">
+                            <p className="text-xs text-jawa-gold mb-2 tracking-widest uppercase font-semibold">Katur Dhumateng :</p>
+                            <p className="text-[10px] text-jawa-cream/70 mb-6 italic">(Kepada Yth)</p>
+                            
+                            <form onSubmit={handleOpen} className="flex flex-col items-center w-full">
+                                <input 
+                                    type="text" 
+                                    value={guestNameInput}
+                                    onChange={(e) => setGuestNameInput(e.target.value)}
+                                    placeholder="Srat Asma Panjenengan (Nama)"
+                                    className="w-full text-center bg-transparent border-b border-jawa-gold/50 text-jawa-cream px-2 py-3 mb-8 outline-none focus:border-jawa-gold placeholder-jawa-lightgold/40 transition-all font-sans text-base"
+                                    required
+                                />
+                                <button 
+                                    type="submit"
+                                    className="px-8 py-3.5 bg-jawa-gold text-jawa-dark font-bold uppercase tracking-[0.2em] text-xs hover:bg-jawa-lightgold transition-colors flex items-center justify-center gap-3 border border-jawa-gold w-full shadow-lg hover:shadow-jawa-gold/20"
+                                >
+                                    <IconEnvelope /> Buka Undangan
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </motion.div>
+            );
+        }
+
+        function HeroSection({ guestName }) {
+            return (
+                <section className="relative min-h-[100vh] flex flex-col items-center justify-center p-6 text-center bg-jawa-dark text-jawa-lightgold overflow-hidden">
+                    {/* Background Image Pasangan (Mode Halus) */}
+                    <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1583939008705-590b2fb2b8cb?auto=format&fit=crop&q=80')] bg-cover bg-center opacity-40"></div>
+                    
+                    {/* Overlay Gradien dan Batik */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-jawa-dark via-jawa-dark/80 to-jawa-dark/30"></div>
+                    <div className="absolute inset-0 bg-batik-pattern opacity-30 mix-blend-color-burn"></div>
+
+                    {/* Ornamen Bingkai Jawa */}
+                    <div className="absolute inset-4 border border-jawa-gold/30 pointer-events-none z-10"></div>
+                    <div className="frame-corner frame-tl z-10"></div>
+                    <div className="frame-corner frame-tr z-10"></div>
+                    <div className="frame-corner frame-bl z-10"></div>
+                    <div className="frame-corner frame-br z-10"></div>
+
+                    <motion.div
+                        initial={{ opacity: 0, y: 30 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 1.5, ease: "easeOut" }}
+                        className="z-20 px-4 mt-20"
+                    >
+                        <p className="text-xs md:text-sm tracking-[0.4em] uppercase text-jawa-gold mb-6 font-medium">
+                            Pawiwahan Ageng
+                        </p>
+                        <h1 className="text-6xl md:text-8xl font-serif mb-6 text-jawa-cream leading-tight drop-shadow-lg">
+                            {PENGANTIN.pria} <br className="md:hidden" />
+                            <span className="text-jawa-gold italic font-light mx-4 md:mx-6 text-5xl md:text-7xl">&amp;</span> 
+                            <br className="md:hidden" />{PENGANTIN.wanita}
+                        </h1>
+                        <p className="text-lg md:text-xl text-jawa-lightgold mb-12 font-light tracking-widest uppercase shadow-black/50 drop-shadow-md">
+                            18 Desember 2026
+                        </p>
+
+                        {/* Menampilkan Nama Tamu di Hero Section */}
+                        {guestName && (
+                            <motion.div 
+                                initial={{ opacity: 0, y: 20 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ delay: 1.5, duration: 0.8 }}
+                                className="mb-12 bg-jawa-dark/50 px-8 py-4 border border-jawa-gold/30 backdrop-blur-sm rounded-sm inline-block"
+                            >
+                                <p className="text-[10px] uppercase tracking-[0.2em] text-jawa-gold/80 mb-2 font-semibold">Katur Dhumateng:</p>
+                                <p className="text-xl md:text-2xl font-serif text-jawa-cream">{guestName}</p>
+                            </motion.div>
+                        )}
+                        
+                        <motion.div 
+                            animate={{ y: [0, 10, 0] }} 
+                            transition={{ repeat: Infinity, duration: 2, ease: "easeInOut" }}
+                            className="mt-16 text-jawa-gold flex flex-col items-center opacity-90"
+                        >
+                            <p className="text-[10px] md:text-xs tracking-[0.2em] uppercase mb-3 font-serif drop-shadow-md">Katur Mengandhap</p>
+                            <div className="w-[1px] h-16 bg-gradient-to-b from-jawa-gold to-transparent"></div>
+                        </motion.div>
+                    </motion.div>
+                </section>
+            );
+        }
+
+        function CountdownSection({ timeLeft }) {
+            const timeUnits = [
+                { label: 'Dinten', value: timeLeft.hari },
+                { label: 'Jam', value: timeLeft.jam },
+                { label: 'Menit', value: timeLeft.menit },
+                { label: 'Detik', value: timeLeft.detik }
+            ];
+
+            return (
+                <section className="py-24 px-6 flex flex-col items-center border-b border-jawa-brown/20 bg-batik-pattern relative">
+                    <div className="absolute inset-0 bg-jawa-paper/90"></div>
+                    <motion.div
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        whileInView={{ opacity: 1, scale: 1 }}
+                        viewport={{ once: true, margin: "-50px" }}
+                        transition={{ duration: 1 }}
+                        className="max-w-2xl w-full text-center bg-jawa-cream p-10 md:p-14 rounded-sm shadow-[0_0_15px_rgba(42,26,16,0.05)] border border-jawa-gold/30 relative z-10"
+                    >
+                        <div className="absolute top-2 left-2 w-6 h-6 border-t border-l border-jawa-gold"></div>
+                        <div className="absolute top-2 right-2 w-6 h-6 border-t border-r border-jawa-gold"></div>
+                        <div className="absolute bottom-2 left-2 w-6 h-6 border-b border-l border-jawa-gold"></div>
+                        <div className="absolute bottom-2 right-2 w-6 h-6 border-b border-r border-jawa-gold"></div>
+
+                        <IconHeart />
+                        <h2 className="text-3xl md:text-4xl font-serif mb-6 text-jawa-dark">Menanti Hari Bahagia</h2>
+                        <p className="text-jawa-brown mb-12 font-light leading-relaxed px-4 italic">
+                            "Manggih rahayu wilujeng ing samudayanipun."<br/><br/>
+                            Dengan memohon rida Allah SWT, kami menantikan kehadiran Bapak/Ibu/Saudara/i untuk memberikan doa restu pada acara pernikahan kami.
+                        </p>
+                        
+                        <div className="flex justify-center gap-4 md:gap-8 flex-wrap">
+                            {timeUnits.map((unit, index) => (
+                                <div key={index} className="flex flex-col items-center">
+                                    <div className="w-16 h-16 md:w-20 md:h-20 bg-jawa-dark text-jawa-gold rounded-full flex items-center justify-center border-4 border-jawa-cream shadow-md mb-3 relative overflow-hidden">
+                                        <div className="absolute inset-0 bg-jawa-gold opacity-10"></div>
+                                        <span className="text-2xl md:text-3xl font-serif z-10">
+                                            {String(unit.value).padStart(2, '0')}
+                                        </span>
+                                    </div>
+                                    <span className="text-[10px] md:text-xs uppercase tracking-widest text-jawa-brown font-bold">{unit.label}</span>
+                                </div>
+                            ))}
+                        </div>
+                    </motion.div>
+                </section>
+            );
+        }
+
+        function OurStorySection() {
+            const stories = [
+                {
+                    year: "2020",
+                    title: "Panggih (Pertemuan)",
+                    desc: "Sebuah kebetulan yang indah. Kami bertemu pertama kali dalam sebuah acara kebudayaan di keraton, bertukar senyum yang menjadi awal segalanya."
+                },
+                {
+                    year: "2023",
+                    title: "Sregep (Menjalin Kasih)",
+                    desc: "Tiga tahun berlalu, saling mengenal dan memahami sifat masing-masing. Menyatukan dua perbedaan menjadi satu harmoni yang selaras."
+                },
+                {
+                    year: "2025",
+                    title: "Lamaran (Pinangan)",
+                    desc: "Dengan niat suci, kedua keluarga besar bertemu. Mengikat janji untuk melangkah ke jenjang yang lebih serius dalam ikatan suci."
+                }
+            ];
+
+            return (
+                <section className="py-24 px-6 bg-jawa-cream border-b border-jawa-brown/10">
+                    <div className="max-w-4xl mx-auto">
+                        <motion.div
+                            initial={{ opacity: 0, y: 20 }}
+                            whileInView={{ opacity: 1, y: 0 }}
+                            viewport={{ once: true }}
+                            className="text-center mb-16"
+                        >
+                            <p className="text-sm tracking-[0.2em] uppercase text-jawa-gold mb-2 font-semibold">Perjalanan Cinta</p>
+                            <h2 className="text-3xl md:text-4xl font-serif mb-6 text-jawa-dark">Kisah Tresna</h2>
+                            <div className="w-24 h-[2px] bg-jawa-gold mx-auto"></div>
+                        </motion.div>
+
+                        <div className="relative border-l-2 border-jawa-gold/30 ml-4 md:ml-0 md:mx-auto md:w-3/4 space-y-12 pb-8">
+                            {stories.map((story, index) => (
+                                <motion.div 
+                                    key={index}
+                                    initial={{ opacity: 0, x: -30 }}
+                                    whileInView={{ opacity: 1, x: 0 }}
+                                    viewport={{ once: true, margin: "-50px" }}
+                                    transition={{ delay: index * 0.2, duration: 0.8 }}
+                                    className="relative pl-8 md:pl-12"
+                                >
+                                    {/* Titik Timeline */}
+                                    <div className="absolute -left-[9px] top-1 w-4 h-4 rounded-full bg-jawa-gold border-4 border-jawa-cream shadow-sm"></div>
+                                    
+                                    <div className="bg-jawa-paper p-6 md:p-8 rounded-sm shadow-sm border border-jawa-gold/10">
+                                        <span className="text-jawa-gold font-bold tracking-widest text-sm mb-2 block">{story.year}</span>
+                                        <h3 className="text-2xl font-serif text-jawa-dark mb-3">{story.title}</h3>
+                                        <p className="text-jawa-brown font-light leading-relaxed text-sm md:text-base">
+                                            {story.desc}
+                                        </p>
+                                    </div>
+                                </motion.div>
+                            ))}
+                        </div>
+                    </div>
+                </section>
+            );
+        }
+
+        function EventDetailsSection() {
+            const events = [
+                { 
+                    title: "Ijab Qobul", 
+                    date: "Jemuwah, 18 Desember 2026", 
+                    time: "Pukul 08:00 - 10:00 WIB", 
+                    location: "Ndalem Joglo Ageng", 
+                    address: "Jl. Kusumanegara No. 1, Yogyakarta" 
+                },
+                { 
+                    title: "Pahargyan", 
+                    date: "Jemuwah, 18 Desember 2026", 
+                    time: "Pukul 11:00 - 14:00 WIB", 
+                    location: "Pendopo Agung Royal Ambarrukmo", 
+                    address: "Jl. Laksda Adisucipto No. 81, Yogyakarta" 
+                }
+            ];
+
+            return (
+                <section className="py-24 px-6 border-b border-jawa-brown/20 bg-batik-pattern relative">
+                    <div className="absolute inset-0 bg-jawa-paper/95"></div>
+                    <div className="max-w-4xl mx-auto z-10 relative">
+                        <motion.div
+                            initial={{ opacity: 0, y: 20 }}
+                            whileInView={{ opacity: 1, y: 0 }}
+                            viewport={{ once: true }}
+                            className="text-center mb-16"
+                        >
+                            <p className="text-sm tracking-[0.2em] uppercase text-jawa-gold mb-2 font-semibold">Titi Laksana</p>
+                            <h2 className="text-3xl md:text-4xl font-serif mb-6 text-jawa-dark">Rangkaian Acara</h2>
+                            <div className="w-24 h-[2px] bg-jawa-gold mx-auto"></div>
+                        </motion.div>
+
+                        <div className="grid md:grid-cols-2 gap-8 md:gap-12">
+                            {events.map((event, index) => (
+                                <motion.div
+                                    key={index}
+                                    initial={{ opacity: 0, y: 30 }}
+                                    whileInView={{ opacity: 1, y: 0 }}
+                                    viewport={{ once: true }}
+                                    transition={{ delay: index * 0.2, duration: 0.8 }}
+                                    className="bg-jawa-cream p-8 md:p-10 rounded-t-full shadow-[0_4px_20px_rgba(0,0,0,0.03)] border-x border-t border-b-4 border-jawa-gold/20 border-b-jawa-gold flex flex-col items-center text-center hover:-translate-y-2 transition-transform duration-500"
+                                >
+                                    <div className="w-12 h-12 rounded-full bg-jawa-dark text-jawa-gold flex items-center justify-center mb-6">
+                                        <span className="font-serif text-xl">{index + 1}</span>
+                                    </div>
+                                    <h3 className="text-2xl font-serif mb-8 text-jawa-dark">{event.title}</h3>
+                                    
+                                    <div className="flex items-center gap-3 text-jawa-brown mb-3">
+                                        <IconCalendar /> <p className="font-medium">{event.date}</p>
+                                    </div>
+                                    <div className="flex items-center gap-3 text-jawa-brown mb-8">
+                                        <IconClock /> <p className="font-medium">{event.time}</p>
+                                    </div>
+
+                                    <div className="w-16 h-[1px] bg-jawa-gold/50 my-2"></div>
+
+                                    <div className="flex flex-col items-center text-jawa-brown mt-6">
+                                        <IconMapPin />
+                                        <p className="font-serif text-lg text-jawa-dark mb-1">{event.location}</p>
+                                        <p className="text-sm font-light text-jawa-brown leading-relaxed">{event.address}</p>
+                                    </div>
+
+                                    <button className="mt-8 px-8 py-2.5 bg-jawa-dark border border-jawa-gold text-jawa-gold text-sm tracking-wider uppercase font-semibold hover:bg-jawa-gold hover:text-jawa-dark transition-all duration-300">
+                                        Peta Lokasi
+                                    </button>
+                                </motion.div>
+                            ))}
+                        </div>
+                    </div>
+                </section>
+            );
+        }
+
+        function GallerySection() {
+            // Gambar placeholder untuk nuansa pernikahan
+            const photos = [
+                "https://images.unsplash.com/photo-1606800052052-a08af7148866?auto=format&fit=crop&q=80&w=400",
+                "https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&q=80&w=400",
+                "https://images.unsplash.com/photo-1544006659-f0b21884ce1d?auto=format&fit=crop&q=80&w=400",
+                "https://images.unsplash.com/photo-1511285560929-80b456fea0bc?auto=format&fit=crop&q=80&w=400",
+                "https://images.unsplash.com/photo-1600861195091-690c90f3c645?auto=format&fit=crop&q=80&w=400",
+                "https://images.unsplash.com/photo-1522673607200-164d1b6ce486?auto=format&fit=crop&q=80&w=400"
+            ];
+
+            return (
+                <section className="py-24 px-6 bg-jawa-dark border-b border-jawa-gold/20 relative overflow-hidden">
+                    <div className="absolute inset-0 bg-batik-pattern opacity-10"></div>
+                    <div className="max-w-5xl mx-auto relative z-10">
+                        <motion.div
+                            initial={{ opacity: 0, y: 20 }}
+                            whileInView={{ opacity: 1, y: 0 }}
+                            viewport={{ once: true }}
+                            className="text-center mb-16"
+                        >
+                            <p className="text-sm tracking-[0.2em] uppercase text-jawa-gold mb-2 font-semibold">Mengabadikan Momen</p>
+                            <h2 className="text-3xl md:text-4xl font-serif mb-6 text-jawa-cream">Galeri Tresna</h2>
+                            <div className="w-24 h-[2px] bg-jawa-gold mx-auto"></div>
+                        </motion.div>
+
+                        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                            {photos.map((url, index) => (
+                                <motion.div 
+                                    key={index}
+                                    initial={{ opacity: 0, scale: 0.9 }}
+                                    whileInView={{ opacity: 1, scale: 1 }}
+                                    viewport={{ once: true }}
+                                    transition={{ delay: index * 0.1, duration: 0.5 }}
+                                    className={`relative overflow-hidden group rounded-sm border-2 border-jawa-gold/30 ${index === 0 || index === 3 ? 'row-span-2' : ''}`}
+                                >
+                                    <div className="aspect-[4/5] w-full h-full">
+                                        <img src={url} alt={`Gallery ${index}`} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 opacity-80 group-hover:opacity-100" />
+                                    </div>
+                                    <div className="absolute inset-0 bg-jawa-dark/20 group-hover:bg-transparent transition-colors duration-500"></div>
+                                </motion.div>
+                            ))}
+                        </div>
+                    </div>
+                </section>
+            );
+        }
+
+        function WeddingGiftSection() {
+            const [toast, setToast] = useState({ show: false, message: '' });
+
+            const showToast = (msg) => {
+                setToast({ show: true, message: msg });
+                setTimeout(() => setToast({ show: false, message: '' }), 3000);
+            };
+
+            const copyToClipboard = (text) => {
+                // Menggunakan execCommand untuk fallback terbaik di iframe/canvas
+                const el = document.createElement('textarea');
+                el.value = text;
+                el.setAttribute('readonly', '');
+                el.style.position = 'absolute';
+                el.style.left = '-9999px';
+                document.body.appendChild(el);
+                el.select();
+                try {
+                    document.execCommand('copy');
+                    showToast("Nomor Rekening Berhasil Disalin");
+                } catch (err) {
+                    showToast("Gagal menyalin. Silakan salin manual.");
+                }
+                document.body.removeChild(el);
+            };
+
+            return (
+                <section className="py-24 px-6 bg-jawa-paper border-b border-jawa-brown/10 relative">
+                    {/* Notifikasi Salin Lokal */}
+                    {toast.show && (
+                        <div className="fixed top-10 left-1/2 -translate-x-1/2 z-50">
+                            <motion.div
+                                initial={{ opacity: 0, y: -20 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                className="bg-jawa-dark text-jawa-gold border border-jawa-gold px-6 py-3 rounded-sm shadow-xl text-sm font-medium flex items-center gap-2"
+                            >
+                                <IconCheck /> {toast.message}
+                            </motion.div>
+                        </div>
+                    )}
+
+                    <div className="max-w-2xl mx-auto text-center">
+                        <motion.div
+                            initial={{ opacity: 0, y: 20 }}
+                            whileInView={{ opacity: 1, y: 0 }}
+                            viewport={{ once: true }}
+                        >
+                            <IconGift />
+                            <p className="text-sm tracking-[0.2em] uppercase text-jawa-gold mb-2 font-semibold">Tanda Kasih</p>
+                            <h2 className="text-3xl md:text-4xl font-serif mb-6 text-jawa-dark">Tali Kasih</h2>
+                            <div className="w-24 h-[2px] bg-jawa-gold mx-auto mb-8"></div>
+                            <p className="text-jawa-brown font-light leading-relaxed mb-10 italic">
+                                Tanpa mengurangi rasa hormat, bagi Bapak/Ibu/Saudara/i yang ingin memberikan tanda kasih untuk kami, dapat melalui nomor rekening di bawah ini:
+                            </p>
+                        </motion.div>
+
+                        <div className="space-y-6">
+                            {/* Rekening 1 */}
+                            <motion.div 
+                                initial={{ opacity: 0, y: 20 }}
+                                whileInView={{ opacity: 1, y: 0 }}
+                                viewport={{ once: true }}
+                                className="bg-jawa-cream p-8 border border-jawa-gold/30 rounded-sm shadow-sm relative overflow-hidden"
+                            >
+                                <div className="absolute -right-6 -top-6 text-jawa-gold/10 w-32 h-32">
+                                    <IconGift />
+                                </div>
+                                <h3 className="text-xl font-bold text-jawa-dark mb-1">Bank BCA</h3>
+                                <p className="text-2xl font-serif text-jawa-brown tracking-widest mb-2">1234 5678 90</p>
+                                <p className="text-sm text-jawa-dark/70 mb-6 uppercase tracking-wider">A.N. {PENGANTIN.priaLengkap}</p>
+                                
+                                <button 
+                                    onClick={() => copyToClipboard('1234567890')}
+                                    className="px-6 py-2 bg-jawa-paper border border-jawa-gold text-jawa-dark text-xs uppercase tracking-wider font-bold hover:bg-jawa-gold hover:text-jawa-dark transition-colors flex items-center gap-2 mx-auto relative z-10"
+                                >
+                                    <IconCopy /> Salin Rekening
+                                </button>
+                            </motion.div>
+
+                            {/* Rekening 2 */}
+                            <motion.div 
+                                initial={{ opacity: 0, y: 20 }}
+                                whileInView={{ opacity: 1, y: 0 }}
+                                viewport={{ once: true, margin: "-50px" }}
+                                className="bg-jawa-cream p-8 border border-jawa-gold/30 rounded-sm shadow-sm relative overflow-hidden"
+                            >
+                                <h3 className="text-xl font-bold text-jawa-dark mb-1">Bank Mandiri</h3>
+                                <p className="text-2xl font-serif text-jawa-brown tracking-widest mb-2">0987 6543 21</p>
+                                <p className="text-sm text-jawa-dark/70 mb-6 uppercase tracking-wider">A.N. {PENGANTIN.wanitaLengkap}</p>
+                                
+                                <button 
+                                    onClick={() => copyToClipboard('0987654321')}
+                                    className="px-6 py-2 bg-jawa-paper border border-jawa-gold text-jawa-dark text-xs uppercase tracking-wider font-bold hover:bg-jawa-gold hover:text-jawa-dark transition-colors flex items-center gap-2 mx-auto relative z-10"
+                                >
+                                    <IconCopy /> Salin Rekening
+                                </button>
+                            </motion.div>
+                        </div>
+                    </div>
+                </section>
+            );
+        }
+
+        // --- BAGIAN RSVP ---
+        function RSVPAndWishesSection({ prefilledName }) {
+            const [formData, setFormData] = useState({ name: prefilledName || '', attendance: 'Rawuh', message: '' });
+            const [wishes, setWishes] = useState([
+                { name: "Keluarga Besar Sastrowardoyo", message: `Nderek mangayubagyo, mugi-mugi ${PENGANTIN.pria} lan ${PENGANTIN.wanita} tansah pinaringan kabagyan, guyup rukun ngantos kaken-kaken ninen-ninen. Wilujeng ing samudayanipun.`, date: "1 dinten kepengker" }
+            ]);
+            const [isFormatting, setIsFormatting] = useState(false);
+            const [isSubmitting, setIsSubmitting] = useState(false);
+            const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
+
+            // Otomatis memperbarui nama di RSVP jika guestName dari cover telah diisi
+            useEffect(() => {
+                if (prefilledName) {
+                    setFormData(prev => ({ ...prev, name: prefilledName }));
+                }
+            }, [prefilledName]);
+
+            const showToast = (msg, type) => {
+                setToast({ show: true, message: msg, type });
+                setTimeout(() => setToast({ show: false, message: '', type: 'success' }), 4000);
+            };
+
+            const formatMessageWithAI = async () => {
+                if (!formData.message.trim()) {
+                    showToast("Saderengipun, mangga kaserat pesenipun rumiyin.", "error");
+                    return;
+                }
+                
+                if (!apiKey && window.location.hostname !== "localhost" && window.location.protocol === "file:") {
+                    showToast("API Key Gemini dereng dipun atur.", "error");
+                    return;
+                }
+
+                setIsFormatting(true);
+                const systemPrompt = "Anda adalah asisten AI ahli pujangga budaya Jawa. Tugas Anda: ubah ucapan selamat pernikahan ini menjadi kalimat yang sangat sopan, elegan, puitis, dan hangat dengan sentuhan kosa kata budaya Jawa (misalnya: nderek mangayubagyo, mugi tansah pinaringan, rahayu, dll) atau bahasa Indonesia yang sangat berbudi pekerti halus bak kraton. Maksimal 3 kalimat. Berikan HANYA teks hasilnya, tanpa tanda kutip.";
+                const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+
+                try {
+                    const response = await fetch(url, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            contents: [{ parts: [{ text: formData.message }] }],
+                            systemInstruction: { parts: [{ text: systemPrompt }] }
+                        })
+                    });
+
+                    if (!response.ok) throw new Error('API request failed');
+
+                    const result = await response.json();
+                    const generatedText = result.candidates?.[0]?.content?.parts?.[0]?.text;
+                    
+                    if (generatedText) {
+                        setFormData(prev => ({ ...prev, message: generatedText.trim() }));
+                        showToast("Pesen sampun dipun percantik dening AI ✨", "success");
+                    }
+                } catch (err) {
+                    showToast("Pangapunten, AI mboten saged dipun akses. Mangga dipun cobi malih.", "error");
+                } finally {
+                    setIsFormatting(false);
+                }
+            };
+
+            const handleSubmit = (e) => {
+                e.preventDefault();
+                if (!formData.name || !formData.message) return;
+
+                setIsSubmitting(true);
+                setTimeout(() => {
+                    setWishes(prev => [{
+                        name: formData.name,
+                        message: formData.message,
+                        date: "Saweg mawon"
+                    }, ...prev]);
+                    
+                    setFormData({ name: '', attendance: 'Rawuh', message: '' });
+                    setIsSubmitting(false);
+                    showToast("Matur nuwun, RSVP & pandonga sampun katur!", "success");
+                }, 1000);
+            };
+
+            return (
+                <section className="py-24 px-6 bg-jawa-cream relative bg-batik-pattern">
+                    {toast.show && (
+                        <div className="fixed top-10 left-1/2 -translate-x-1/2 z-50 w-full max-w-sm px-6">
+                            <motion.div
+                                initial={{ opacity: 0, y: -20 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                className={`flex items-center gap-3 px-5 py-3.5 rounded-sm shadow-xl text-sm font-medium ${toast.type === 'error' ? 'bg-red-50 text-red-800 border border-red-200' : 'bg-jawa-dark text-jawa-gold border border-jawa-gold'}`}
+                            >
+                                {toast.type === 'error' ? <IconAlert /> : <IconCheck />}
+                                {toast.message}
+                            </motion.div>
+                        </div>
+                    )}
+
+                    <div className="max-w-6xl mx-auto grid lg:grid-cols-5 gap-12 lg:gap-16">
+                        <motion.div 
+                            initial={{ opacity: 0, x: -30 }}
+                            whileInView={{ opacity: 1, x: 0 }}
+                            viewport={{ once: true }}
+                            className="lg:col-span-2 flex flex-col bg-jawa-paper p-8 md:p-10 border border-jawa-gold/30 shadow-lg relative"
+                        >
+                            <h2 className="text-3xl md:text-4xl font-serif mb-4 text-jawa-dark">Konfirmasi Kehadiran</h2>
+                            <p className="text-jawa-brown font-light mb-10 text-sm leading-relaxed">
+                                Kehadiran serta doa restu Bapak/Ibu/Saudara/i merupakan suatu kehormatan dan kebahagiaan bagi kami.
+                            </p>
+
+                            <form onSubmit={handleSubmit} className="flex flex-col gap-6">
+                                <div>
+                                    <label className="block text-[11px] uppercase tracking-[0.2em] font-bold text-jawa-dark mb-2">Asma Lengkap (Nama)</label>
+                                    <input type="text" required className="w-full bg-jawa-cream border-b-2 border-jawa-brown/30 px-4 py-3 outline-none focus:border-jawa-gold focus:bg-white transition-all text-jawa-dark font-medium" placeholder="Cth: Bapak Budi & Keluarga" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} />
+                                </div>
+                                <div>
+                                    <label className="block text-[11px] uppercase tracking-[0.2em] font-bold text-jawa-dark mb-2">Kehadiran</label>
+                                    <select className="w-full bg-jawa-cream border-b-2 border-jawa-brown/30 px-4 py-3 outline-none focus:border-jawa-gold focus:bg-white transition-all text-jawa-dark font-medium" value={formData.attendance} onChange={(e) => setFormData({...formData, attendance: e.target.value})}>
+                                        <option value="Rawuh">Inggih, Kula Badhe Rawuh (Hadir)</option>
+                                        <option value="Mboten Rawuh">Pangapunten, Kula Mboten Saged Rawuh</option>
+                                    </select>
+                                </div>
+                                <div className="relative">
+                                    <label className="block text-[11px] uppercase tracking-[0.2em] font-bold text-jawa-dark mb-2">Pesen & Doa Restu</label>
+                                    <textarea required rows="4" className="w-full bg-jawa-cream border-b-2 border-jawa-brown/30 px-4 py-3 outline-none focus:border-jawa-gold focus:bg-white transition-all text-jawa-dark font-medium resize-none" placeholder="Srat pandonga wilujeng wonten mriki..." value={formData.message} onChange={(e) => setFormData({...formData, message: e.target.value})} />
+                                    
+                                    <div className="mt-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-gradient-to-r from-jawa-gold/10 to-transparent p-4 border-l-4 border-jawa-gold">
+                                        <div className="flex-1">
+                                            <p className="text-xs text-jawa-dark font-bold flex items-center gap-1.5 mb-1"><IconSparkles /> Pujangga AI</p>
+                                            <p className="text-[10px] text-jawa-brown leading-relaxed font-light">Serat pesen cekak, AI badhe ndandani dados basa ingkang alus, endah, saha nengsemaken.</p>
+                                        </div>
+                                        <button type="button" onClick={formatMessageWithAI} disabled={isFormatting} className="w-full sm:w-auto shrink-0 bg-jawa-dark border border-jawa-gold hover:bg-jawa-gold text-jawa-gold hover:text-jawa-dark text-xs px-5 py-2.5 flex items-center justify-center gap-2 transition-all shadow-md font-semibold uppercase tracking-wider disabled:opacity-50">
+                                            {isFormatting ? <IconLoader /> : "Percantik"}
+                                        </button>
+                                    </div>
+                                </div>
+                                <button type="submit" disabled={isSubmitting} className="mt-6 w-full bg-jawa-gold text-jawa-dark font-bold uppercase tracking-[0.2em] text-sm py-4 flex items-center justify-center gap-2 hover:bg-jawa-dark hover:text-jawa-gold transition-colors duration-300 disabled:opacity-70 disabled:cursor-not-allowed border border-jawa-gold">
+                                    {isSubmitting ? <IconLoader /> : <><IconSend /> Kintun RSVP</>}
+                                </button>
+                            </form>
+                        </motion.div>
+
+                        <motion.div 
+                            initial={{ opacity: 0, x: 30 }}
+                            whileInView={{ opacity: 1, x: 0 }}
+                            viewport={{ once: true }}
+                            className="lg:col-span-3 h-[650px] lg:h-auto"
+                        >
+                            <div className="bg-transparent h-full flex flex-col">
+                                <div className="flex justify-between items-center mb-6 px-2">
+                                    <h3 className="text-2xl md:text-3xl font-serif text-jawa-dark border-b-2 border-jawa-gold pb-2 inline-block">Buku Tamu</h3>
+                                    <span className="bg-jawa-dark text-jawa-gold text-xs font-bold px-4 py-1.5 rounded-full shadow-md">{wishes.length} Pesen</span>
+                                </div>
+                                
+                                <div className="flex-1 overflow-y-auto pr-4 space-y-5 scrollbar-hide">
+                                    {wishes.map((wish, index) => (
+                                        <motion.div 
+                                            initial={{ opacity: 0, y: 10 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            transition={{ delay: index * 0.1 }}
+                                            key={index} 
+                                            className="bg-jawa-paper p-6 border-l-4 border-jawa-gold shadow-sm hover:shadow-md transition-shadow relative"
+                                        >
+                                            <div className="flex justify-between items-start mb-3">
+                                                <h4 className="font-bold text-jawa-dark text-sm md:text-base">{wish.name}</h4>
+                                                <span className="text-[10px] text-jawa-brown uppercase tracking-widest">{wish.date}</span>
+                                            </div>
+                                            <p className="text-jawa-dark/80 text-sm md:text-base font-serif leading-relaxed italic">
+                                                "{wish.message}"
+                                            </p>
+                                        </motion.div>
+                                    ))}
+                                </div>
+                            </div>
+                        </motion.div>
+                    </div>
+                </section>
+            );
+        }
+
+        function FooterSection() {
+            return (
+                <footer className="py-20 bg-jawa-dark text-center text-jawa-cream bg-batik-pattern relative border-t-4 border-jawa-gold">
+                    <div className="absolute inset-0 bg-jawa-dark/90"></div>
+                    <motion.div initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} viewport={{ once: true }} className="z-10 relative">
+                        <p className="font-serif text-4xl text-jawa-gold mb-4 drop-shadow-md">{PENGANTIN.pria} & {PENGANTIN.wanita}</p>
+                        <p className="text-sm font-light mb-10 text-jawa-lightgold italic max-w-md mx-auto px-4">
+                            "Matur sembah nuwun awit saking rawuh saha donga pangestu panjenengan sami."
+                        </p>
+                        <div className="w-16 h-[1px] bg-jawa-gold/50 mx-auto mb-10"></div>
+                        <p className="text-[10px] tracking-widest uppercase text-jawa-gold/60 font-semibold">Damel dening AI Canvas</p>
+                    </motion.div>
+                </footer>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
